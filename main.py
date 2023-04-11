@@ -18,8 +18,7 @@ def main():
         env = Artificial_Economy_Env(data)
         env.seed(2)
         env._max_episode_steps = 50
-        
-        
+               
         # Agent paramaters
         state_size = 2
         action_size = 1
@@ -29,15 +28,12 @@ def main():
         n_episodes = 500
         print_every = 100
 
-        
         agent = Agent(state_size, action_size, random_seed, device)
-
 
         DDPG(env, data, n_episodes, agent, print_every, results_folder)
 
-
-
         load_agent(agent, results_folder)
+        
         plot_contrfactual_series(data, agent, results_folder, i="(train_noise)", add_noise=True)
         
            
