@@ -22,7 +22,7 @@ def init_weights_he_actor(layer: object) -> float:
 class Actor(nn.Module):
     """Actor (Policy) Model."""
 
-    def __init__(self, state_size, action_size, seed, fc1_units=1):# , fc2_units=1):
+    def __init__(self, state_size, action_size, seed, fc1_units=3):# , fc2_units=1):
         """Initialize parameters and build model.
         Params
         ======
@@ -43,14 +43,15 @@ class Actor(nn.Module):
       
         # Define activation functions
         self.relu = nn.ReLU()
+        self.tanh=nn.Tanh()
      
         # Initialize the neural network weights
         self._reset_parameters()
 
     def _reset_parameters(self):
         """Initialize the weights of the neural network using He initialization."""
-        self.fc1.weight.data.normal_(std=init_weights_he_actor(self.fc1))
-        # self.fc2.weight.data.normal_(std=init_weights_he_actor(self.fc2))
+        self.fc1.weight.data.normal_(mean= 0 ,std=init_weights_he_actor(self.fc1))
+        # self.fc2.weight.data.normal_(mean =0,std=init_weights_he_actor(self.fc2))
         self.fc2.weight.data.normal_(std=3e-3)
         
         
@@ -59,4 +60,7 @@ class Actor(nn.Module):
         x = self.fc1(state)
         x = self.relu(x)
         x = self.fc2(x)
+        # x = self.relu(x)
+        # Scale the actor output to the desired range
+        # x = (x * (15 - 1)) + 1
         return x    

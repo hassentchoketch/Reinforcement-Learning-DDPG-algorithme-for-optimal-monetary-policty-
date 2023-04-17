@@ -4,7 +4,7 @@ sys.path.append(r'c:\users\hassen\miniconda3\envs\r_learning\lib\site-packages')
 import numpy as np
 import gym 
 from gym.utils import seeding
-
+from sklearn.preprocessing import MinMaxScaler
 
 class Artificial_Economy_Env(gym.Env):
     ''' 
@@ -72,16 +72,19 @@ class Artificial_Economy_Env(gym.Env):
     data : DataFrame contain historical data used to initialize state.
     
     '''
-    def __init__(self, data):
+    def __init__(self, data,gap_model,inf_model,criteria,inflation_target=2, gdp_gap_target=0):
         
         # Initialize the environment with default values
         self.__version__ = "0.0.1"
-        self.criteria = 0.3
-        self.goal_π = 2
-        self.goal_gap = 0
+        self.criteria = criteria
+        self.goal_π = inflation_target
+        self.goal_gap = gdp_gap_target
+        self.gap_model = gap_model
+        self.inf_model = inf_model
 
         # set initial observations
         self.inf , self.gdp_gap, self.int = (data["inf"],data["GDP_gap"],data["ffr"])
+        
 
         self._max_episode_steps = None
         self._current_step = 0
@@ -105,15 +108,15 @@ class Artificial_Economy_Env(gym.Env):
         """
         
         # Sets the environment to its initial state
-        index = np.random.choice(len(self.inf))
+        index = np.random.choice(range(1 ,len(self.inf)))
         self.π   = self.inf[index]
         self.gap = self.gdp_gap[index]
-        self.i   = self.int[index]
+        self.i_p   = self.int[index-1]
         self.π_p = self.inf[index - 1]
         self.gap_p = self.gdp_gap[index - 1]
         
         # Returns the current state of the environment
-        self.state = np.array([self.π , self.gap, self.i, self.π_p, self.gap_p],dtype = np.float64)
+        self.state = np.array([self.π , self.gap, self.i_p, self.π_p, self.gap_p],dtype = np.float64)
         self._current_step = 0
         return self.state
 
@@ -139,35 +142,21 @@ class Artificial_Economy_Env(gym.Env):
         self.state = np.array([self.π1, self.gap1, self.i, self.π, self.gap],dtype = np.float64)
         
         # Returns the observation, reward, and done status after taking the specified action
-        return self.state, self.reward, self.done, {}
+        return self.state, self.reward[0][0], self.done, {}
 
     def _execute_action(self, action):
         """ Setting the value of action within the range of intrest rate """
-        self.i  = np.clip(action, min(self.int), max(self.int))[0]
+        # self.i  = np.clip(action, min(self.int), max(self.int))
+        self.i = action
         
     def _transition_to_next_state(self):
         """Executes the specified action """
-        eps_gap = np.random.normal(0, np.sqrt(0.2108))
-        eps_pi = np.random.normal(0, np.sqrt(0.0330))
+        eps_gap = np.random.normal(0, self.gap_model.resid.std())
+        eps_pi = np.random.normal(0, self.inf_model.resid.std())
+        self.gap1 = self.gap_model.predict((1,self.gap,self.π,self.i,self.i_p)) + eps_gap
+        self.π1 = self.inf_model.predict((1,self.gap1,self.gap,self.gap_p,self.π,self.π_p,self.i)) + eps_pi
 
-        self.gap1 = (
-            0.3834
-            + 0.9084 * self.gap
-            - 0.1437 * self.π
-            + 0.2726 * self.i
-            - 0.2896 * self.i_p
-            + eps_gap
-        )
-        self.π1 = (
-            0.1035
-            - 0.0655 * self.gap1
-            + 0.1970 * self.gap
-            - 0.1121 * self.gap_p
-            + 1.297 * self.π
-            - 0.3116 * self.π_p
-            - 0.0122 * self.i
-            + eps_pi
-        )
+      
 
     def _done_(self):
         """
@@ -210,6 +199,6 @@ class Artificial_Economy_Env(gym.Env):
         reward_g = -(10 * g_div) if g_div > 4 else 0
 
         # Total reward
-        reward = -0.5 * π_div - 0.5 * g_div
+        reward = -0.5 * π_div - 0.5* g_div
 
         self.reward = reward + reward_g + reward_pi

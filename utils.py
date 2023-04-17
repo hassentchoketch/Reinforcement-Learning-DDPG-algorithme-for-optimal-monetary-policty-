@@ -129,7 +129,7 @@ def agent_policy(states: list[tuple[float, float]], agent: object) -> list[float
         actions.append(action)
     return actions
 
-def contrfactual_simulation(states: list[tuple[float, float]], actions: list[float])-> list[float]:
+def contrfactual_simulation(states: list[tuple[float, float]], actions: list[float],gap_model,inf_model)-> list[float]:
     """Simulate a counterfactual scenario using the given states and actions.
 
     Args:
@@ -143,29 +143,40 @@ def contrfactual_simulation(states: list[tuple[float, float]], actions: list[flo
     contrfactual_gap = []
 
     # Calculate the noise terms for the simulation
-    eps_gap = np.random.normal(0, np.sqrt(0.2108))
-    eps_pi = np.random.normal(0, np.sqrt(0.0330))
+    # eps_gap = np.random.normal(0, np.sqrt(0.2108))
+    # eps_pi = np.random.normal(0, np.sqrt(0.0330))
 
     # Simulate the counterfactual scenario for each time step
-    for i in range(1, len(states)):
-        gap1 = (
-            0.3834
-            + 0.9084 * states[i][1]
-            - 0.1437 * states[i][0]
-            + 0.2726 * actions[i]
-            - 0.2896 * actions[i - 1]
-            + eps_gap
-        )
-        inf1 = (
-            0.1035
-            - 0.0655 * gap1
-            + 0.1970 * states[i][1]
-            - 0.1121 * states[i - 1][1]
-            + 1.297 * states[i][0]
-            - 0.3116 * states[i - 1][0]
-            - 0.0122 * actions[i]
-            + eps_pi
-        )
+    for i in range(2, len(states)):
+        gap1 = gap_model.predict((1,states[i-1][1],
+                                    states[i-1][0],
+                                    actions[i-1],
+                                    actions[i-2])) + gap_model.resid[i]
+       
+        inf1 = inf_model.predict((1,gap1,
+                                      states[i-1][1],
+                                      states[i - 2][1],
+                                      states[i-1][0],
+                                      states[i-2][0],
+                                      actions[i-1])) + inf_model.resid[i]
+        # gap1 = (
+        #     0.3834
+        #     + 0.9084 * states[i][1]
+        #     - 0.1437 * states[i][0]
+        #     + 0.2726 * actions[i]
+        #     - 0.2896 * actions[i - 1]
+        #     + eps_gap
+        # )
+        # inf1 = (
+        #     0.1035
+        #     - 0.0655 * gap1
+        #     + 0.1970 * states[i][1]
+        #     - 0.1121 * states[i - 1][1]
+        #     + 1.297 * states[i][0]
+        #     - 0.3116 * states[i - 1][0]
+        #     - 0.0122 * actions[i]
+        #     + eps_pi
+        # )
         contrfactual_gap.append(gap1)
         contrfactual_inf.append(inf1)
 

@@ -14,12 +14,14 @@ def plot_scores(scores,results_folder,name):
 
 
 class plot_contrfactual_series:
-    def __init__(self, data, agent, results_folder, i, add_noise=None):
+    def __init__(self, data, agent, gap_model, inf_model, results_folder , i, add_noise=None):
         self.data = data
         self.agent = agent
         self.results_folder = results_folder
         self.i = i
         self.add_noise = add_noise
+        self.gap_model = gap_model
+        self.inf_model = inf_model
 
         self.get_state()
         # print("satat", self.states)
@@ -42,55 +44,46 @@ class plot_contrfactual_series:
     def contrfactual(self):
         self.inf_ = []
         self.gap_ = []
-        eps_gap = np.random.normal(0, np.sqrt(0.2108))
-        eps_pi = np.random.normal(0, np.sqrt(0.0330))
-        for i in range(1, len(self.states)):
-            gap1 = (
-                0.3834
-                + 0.9084 * self.states[i][1]
-                - 0.1437 * self.states[i][0]
-                + 0.2726 * self.actions[i]
-                - 0.2896 * self.actions[i - 1]
-                + eps_gap
-            )
-            inf1 = (
-                0.1035
-                - 0.0655 * gap1
-                + 0.1970 * self.states[i][1]
-                - 0.1121 * self.states[i - 1][1]
-                + 1.297 * self.states[i][0]
-                - 0.3116 * self.states[i - 1][0]
-                - 0.0122 * self.actions[i]
-                + eps_pi
-            )
+        for i in range(2, len(self.states)):
+            gap1 = self.gap_model.predict((1,self.states[i-1][1],
+                                    self.states[i-1][0],
+                                    self.actions[i-1],
+                                    self.actions[i-2])) + self.gap_model.resid[i]
+            inf1 = self.inf_model.predict((1,gap1,
+                                      self.states[i-1][1],
+                                      self.states[i - 2][1],
+                                      self.states[i-1][0],
+                                      self.states[i-2][0],
+                                      self.actions[i-1])) + self.inf_model.resid[i]
             self.gap_.append(gap1)
             self.inf_.append(inf1)
 
     def contrefactual_plot(self):
+        
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(7, 7), dpi=100)
         (l1,) = ax1.plot(
-            self.data["ffr"].index,
-            np.array(self.actions).squeeze(-1),
+            self.data["ffr"][2:].index,
+            np.array(self.actions[2:]).squeeze(-1),
             color="tab:Blue",
             lw=2,
         )
         (l2,) = ax1.plot(
-            self.data["ffr"].index,
-            self.data["ffr"],
+            self.data["ffr"][2:].index,
+            self.data["ffr"][2:],
             color="tab:Orange",
             # alpha=0.2,
         )
         ax1.set_ylabel("FFR")
         # -----------------------------------
         (l1,) = ax2.plot(
-            self.data["inf"][1:].index,
+            self.data["inf"][2:].index,
             np.array(self.inf_).squeeze(-1),
             color="tab:Blue",
             lw=2,
         )
         (l2,) = ax2.plot(
-            self.data["inf"][1:].index,
-            self.data["inf"][1:],
+            self.data["inf"][2:].index,
+            self.data["inf"][2:],
             color="tab:Orange",
             # alpha=0.2,
         )
@@ -98,14 +91,14 @@ class plot_contrfactual_series:
         ax2.axhline(y=2, color="r", linestyle="-")
         # ---------------------------------------
         (l1,) = ax3.plot(
-            self.data["GDP_gap"][1:].index,
+            self.data["GDP_gap"][2:].index,
             np.array(self.gap_).squeeze(-1),
             color="tab:Blue",
             lw=2,
         )
         (l2,) = ax3.plot(
-            self.data["GDP_gap"][1:].index,
-            self.data["GDP_gap"][1:],
+            self.data["GDP_gap"][2:].index,
+            self.data["GDP_gap"][2:],
             color="tab:Orange",
             # alpha=0.2,
         )

@@ -16,15 +16,16 @@ class DDPG:
      - print_every: The interval at which to print progress updates during training
      - results_folder: The folder to save training results in"""
    
-    def __init__(self, env, data, n_episodes, agent, print_every, results_folder):
+    def __init__(self, env, data, n_episodes, agent, print_every, results_folder,gap_model,inf_model):
         """Initializes a DDPG instance with the given parameters and calls the `train` method to start training the agent."""
-        self.env = env
-        self.data = data
-        self.n_episodes = n_episodes
-        self.agent = agent
-        self.print_every = print_every
+        self.env            = env
+        self.data           = data
+        self.n_episodes     = n_episodes
+        self.agent          = agent
+        self.print_every    = print_every
         self.results_folder = results_folder
-
+        self.gap_model      = gap_model
+        self.inf_model      = inf_model
         self.train()
 
     def train(self):
@@ -53,57 +54,57 @@ class DDPG:
             scores.append(self.score)
             
             # save all agents during training that fulfill the following criteria : steps > 1 and (self.score / self.steps) > -4.
-            if self.steps > 1 and (self.score / self.steps) > -4:
-                self._steady_state_calculation()
-                saved_agents_scores.append(self.score)
+    #         if self.steps > 1 and (self.score / self.steps) > -4:
+    #             self._steady_state_calculation()
+    #             saved_agents_scores.append(self.score)
                 
-        # select the agent with the best steady state reward    
-        self._optimal_agent()
+    #     # select the agent with the best steady state reward    
+    #     self._optimal_agent()
         
-        # print scours of all agens   
-        plot_scores(scores, self.results_folder,'scores')
+    #     # print scours of all agens   
+    #     plot_scores(scores, self.results_folder,'scores')
         
-        # print scours of saved agens
-        plot_scores(saved_agents_scores, self.results_folder,'saved_agents__scores')
+    #     # print scours of saved agens
+    #     plot_scores(saved_agents_scores, self.results_folder,'saved_agents__scores')
 
-    def _steady_state_calculation(self):
+    # def _steady_state_calculation(self):
         
-        states = get_states(self.data)
-        actions = agent_policy(states, self.agent)
-        self.inf_, self.gap_ = contrfactual_simulation(states, actions)
-        self._ss_reward()
-        self._save_best_agents()
+    #     states = get_states(self.data)
+    #     actions = agent_policy(states, self.agent)
+    #     self.inf_ , self.gap_ = contrfactual_simulation(states, actions,self.gap_model,self.inf_model)
+    #     self._ss_reward()
+    #     self._save_best_agents()
 
-    def _ss_reward(self):
-        inf_div = []
-        gap_div = []
-        for p, g in zip(self.inf_, self.gap_):
-            inf_div.append((p - self.env.goal_π) ** 2)
-            gap_div.append((g) ** 2)
-        self.inf_loss = np.mean(inf_div)
-        self.gap_loss = np.mean(gap_div)
-        self.ss_reward = 0.5 * (self.inf_loss) + 0.5 * (self.gap_loss)
+    # def _ss_reward(self):
+    #     inf_div = []
+    #     gap_div = []
+    #     for p, g in zip(self.inf_, self.gap_):
+    #         inf_div.append((p - self.env.goal_π) ** 2)
+    #         gap_div.append((g) ** 2)
+    #     self.inf_loss = np.mean(inf_div)
+    #     self.gap_loss = np.mean(gap_div)
+    #     self.ss_reward = 0.5 * (self.inf_loss) + 0.5 * (self.gap_loss)
 
-    def _save_best_agents(self):
-        if self.ss_max is None or self.ss_reward < self.ss_max:
-            self.ss_max = self.ss_reward
-            print(
-                f"\rEpisode{self.i_episode}\tAverage Score:{self.score}\tSteps:{self.steps}\ inf_loss:{self.inf_loss}\gap_loss:{self.gap_loss}\ss_reward: {self.ss_reward}"
-            )
-            save_agent(self.agent, self.results_folder, self.i_episode)
-            self.saved_agent.append(self.i_episode)
+    # def _save_best_agents(self):
+    #     if self.ss_max is None or self.ss_reward < self.ss_max:
+    #         self.ss_max = self.ss_reward
+    #         print(
+    #             f"\rEpisode{self.i_episode}\tAverage Score:{self.score}\tSteps:{self.steps}\ inf_loss:{self.inf_loss}\gap_loss:{self.gap_loss}\ss_reward: {self.ss_reward}"
+    #         )
+    #         save_agent(self.agent, self.results_folder, self.i_episode)
+    #         self.saved_agent.append(self.i_episode)
 
-    def _optimal_agent(self):
-        for i in self.saved_agent:
-            if i == max(self.saved_agent):
-                os.rename(
-                    f"{self.results_folder}/checkpoint_actor_{i}.pth",
-                    f"{self.results_folder}/checkpoint_actor_.pth",
-                )
-                os.rename(
-                    f"{self.results_folder}/checkpoint_critic_{i}.pth",
-                    f"{self.results_folder}/checkpoint_critic_.pth",
-                )
-            else:
-                os.remove(f"{self.results_folder}/checkpoint_actor_{i}.pth")
-                os.remove(f"{self.results_folder}/checkpoint_critic_{i}.pth")
+    # def _optimal_agent(self):
+    #     for i in self.saved_agent:
+    #         if i == max(self.saved_agent):
+    #             os.rename(
+    #                 f"{self.results_folder}/checkpoint_actor_{i}.pth",
+    #                 f"{self.results_folder}/checkpoint_actor_.pth",
+    #             )
+    #             os.rename(
+    #                 f"{self.results_folder}/checkpoint_critic_{i}.pth",
+    #                 f"{self.results_folder}/checkpoint_critic_.pth",
+    #             )
+    #         else:
+    #             os.remove(f"{self.results_folder}/checkpoint_actor_{i}.pth")
+    #             os.remove(f"{self.results_folder}/checkpoint_critic_{i}.pth")
