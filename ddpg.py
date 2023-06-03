@@ -31,7 +31,7 @@ class DDPG:
     def train(self):
         """Trains the reinforcement learning agent using the DDPG algorithm. ."""
         scores = []
-        saved_agents_scores = []
+        # saved_agents_scores = []
         self.saved_agent = []
         self.ss_max = None
         # loop over number of episods 
@@ -61,8 +61,8 @@ class DDPG:
     #     # select the agent with the best steady state reward    
     #     self._optimal_agent()
         
-    #     # print scours of all agens   
-    #     plot_scores(scores, self.results_folder,'scores')
+        # plot scours of all agens   
+        plot_scores(scores, self.results_folder,'scores')
         
     #     # print scours of saved agens
     #     plot_scores(saved_agents_scores, self.results_folder,'saved_agents__scores')
